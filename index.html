@@ -438,6 +438,9 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
 .field input,.field textarea{width:100%;padding:11px 13px;border-radius:11px;font-size:14px;
   background:rgba(7,11,22,.8);border:1px solid var(--line);color:#EAF0FF;font-family:inherit;resize:vertical}
 .field textarea{font-family:ui-monospace,Consolas,monospace;font-size:11px;line-height:1.5;min-height:70px}
+.inline-row{display:flex;gap:8px}
+.inline-row input{flex:1;min-width:0}
+.inline-row .btn-sm{flex:0 0 auto;white-space:nowrap}
 .field input::placeholder,.field textarea::placeholder{color:#5C6885}
 .row-between{display:flex;align-items:center;justify-content:space-between;gap:14px;
   padding:12px 0;border-bottom:1px solid rgba(120,145,220,.1)}
@@ -752,7 +755,7 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
     <div class="prof-list" id="profList"></div>
     <div class="field" style="margin-top:16px;margin-bottom:0">
       <label for="newProfInput">新建档案</label>
-      <div style="display:flex;gap:8px">
+      <div class="inline-row">
         <input id="newProfInput" maxlength="12" placeholder="输入名字" autocomplete="off">
         <button class="btn-sm" id="newProfBtn">新建</button>
       </div>
