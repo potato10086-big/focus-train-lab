@@ -134,7 +134,10 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
   padding-top:12px;border-top:1px solid rgba(120,145,220,.14);font-size:11.5px;color:#8290B4}
 .mode-arrow{color:var(--cyan);font-size:15px;transition:transform .22s}
 .mode:hover .mode-arrow{transform:translateX(4px)}
-.variant-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.variant-label{display:flex;align-items:baseline;gap:8px;margin-top:12px;
+  font-size:10.5px;letter-spacing:.1em;color:#8FA0C8;font-weight:700}
+.variant-label span{letter-spacing:0;font-weight:600;color:var(--dimmer)}
+.variant-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
 .vchip{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700;cursor:pointer;
   background:rgba(16,23,44,.8);border:1px solid var(--line);color:#8FA0C8;
   transition:border-color .18s,color .18s,background .18s}
@@ -198,7 +201,7 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
   flex-direction:column;align-items:center;justify-content:center}
 
 /* Stroop */
-.stroop-card{position:relative;width:min(100%,420px);aspect-ratio:1.35;border-radius:24px;
+.stroop-card{position:relative;width:min(100%,420px,max(200px,calc(100vh - 330px)));aspect-ratio:1.35;border-radius:24px;
   display:grid;place-items:center;background:rgba(16,23,44,.62);
   border:1px solid var(--line);overflow:hidden;transition:border-color .25s}
 .stroop-card.rev{border-color:rgba(255,134,200,.42)}
@@ -236,7 +239,7 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
   border:1px solid rgba(221,255,82,.4);color:var(--lime);font-size:25px;font-weight:900;
   font-variant-numeric:tabular-nums;transition:transform .16s}
 .next-num.bump{transform:scale(1.16)}
-.schulte-grid{display:grid;gap:7px;width:min(100%,min(84vw,540px));aspect-ratio:1}
+.schulte-grid{display:grid;gap:7px;width:min(100%,min(84vw,540px),max(210px,calc(100vh - 300px)));aspect-ratio:1}
 .cell{display:grid;place-items:center;border-radius:10px;cursor:pointer;
   background:rgba(16,23,44,.72);border:1px solid rgba(120,145,220,.2);color:#DCE4FA;
   font-weight:800;font-variant-numeric:tabular-nums;transition:background .14s,border-color .14s,transform .1s,color .14s;
@@ -251,7 +254,7 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
 .schulte-foot b{color:#C9D4EF;font-variant-numeric:tabular-nums}
 
 /* 六边形 */
-.hex-wrap{width:min(100%,min(86vw,560px));aspect-ratio:1;position:relative}
+.hex-wrap{width:min(100%,min(86vw,560px),max(210px,calc(100vh - 300px)));aspect-ratio:1;position:relative}
 .hex-wrap svg{width:100%;height:100%;display:block;overflow:visible}
 .hex-poly{cursor:pointer;transition:fill .14s,stroke .14s;fill:rgba(16,23,44,.8);stroke:rgba(120,145,220,.3);stroke-width:2}
 .hex-poly:hover{fill:rgba(26,37,68,.98);stroke:rgba(110,231,255,.55)}
@@ -491,6 +494,21 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
   .mode-meta{grid-column:1/-1;border-top:0;padding-top:2px;margin-top:2px}
   .scroll-hint{display:block}
 }
+/* 矮屏 / 横屏：压紧顶部，让游戏区完整落在可视范围 */
+@media (max-height:560px){
+  .screen{padding-top:8px;padding-bottom:20px}
+  .play-wrap{padding-top:0}
+  .pt-left h3{font-size:17px;margin-top:2px}
+  .timerbar{margin-top:8px}
+  .prompt{display:none}
+  .stage{margin-top:8px;min-height:auto}
+  .play-foot{margin-top:10px;padding-top:8px}
+  .play-top{gap:8px}
+  .schulte-head{margin-bottom:8px}
+  .next-num{min-width:40px;height:40px;font-size:19px;padding:0 10px}
+  .next-lbl{font-size:12px}
+  .schulte-foot{margin-top:10px}
+}
 @media (max-width:560px){
   .level{min-width:132px}
   .best{margin-left:0;text-align:left;width:100%}
@@ -540,7 +558,7 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
           <span class="fact"><i></i>5 档难度</span>
           <span class="fact"><i></i>3 个科目 · 4 种变体</span>
           <span class="fact"><i></i>一局约 3 分钟</span>
-          <span class="fact"><i></i>多玩家排行榜</span>
+          <span class="fact"><i></i>每人一个档案</span>
         </div>
       </div>
       <div class="reticle" aria-hidden="true">
@@ -844,10 +862,10 @@ const META = {
 
 const ORDER = ["stroop","schulte","radical"];
 const VARIANTS = [
-  { id:"asc",     label:"数字正序", short:"正序" },
-  { id:"desc",    label:"数字倒序", short:"倒序" },
-  { id:"letters", label:"字母 A→Y", short:"字母" },
-  { id:"hex",     label:"六边形不规则", short:"六边形" }
+  { id:"asc",     label:"数字正序：1 → N 顺序点",              short:"1→N" },
+  { id:"desc",    label:"数字倒序：N → 1 倒着点",              short:"N→1" },
+  { id:"letters", label:"字母顺序：A → Z",                     short:"A→Z" },
+  { id:"hex",     label:"六边形不规则：没有网格线，靠轮廓定位", short:"⬡ 六边形" }
 ];
 const STORE_KEY = "focus-train-lab-v1";
 const UNLOCK_THRESHOLD = 60;
@@ -1075,7 +1093,8 @@ function renderModes(){
     if (id === "radical") meta = lv.radical.n + " 题 · " + (lv.radical.sec ? lv.radical.sec + "s/题" : "不限时");
 
     const variantRow = id === "schulte"
-      ? '<div class="variant-row">' + VARIANTS.map(v =>
+      ? '<div class="variant-label">玩法<span>点一下切换</span></div>' +
+        '<div class="variant-row">' + VARIANTS.map(v =>
           '<button type="button" class="vchip" data-v="' + v.id + '" aria-pressed="' +
           (S.variant === v.id) + '" title="' + v.label + '">' + v.short + '</button>'
         ).join("") + '</div>'
@@ -1144,7 +1163,7 @@ function beginRound(){
   $("#briefStep").textContent = S.mode === "full"
     ? "科目 " + (S.qi + 1) + " / " + S.queue.length
     : "单项练习 · LV." + S.level;
-  $("#briefTitle").textContent = META[id].name;
+  $("#briefTitle").textContent = META[id].name + (id === "schulte" ? " · " + schulteVariantLabel() : "");
   $("#briefSub").textContent = META[id].desc;
 
   const rules = [];
@@ -1175,7 +1194,25 @@ function beginRound(){
     rules.push("遇到标了「反」的题，改成<b>看整字选部件</b>。");
     rules.push(lv.radical.sec ? "每题 <b>" + lv.radical.sec + " 秒</b>，超时算错。" : "不限时，但反应越快分越高。");
   }
-  $("#briefRules").innerHTML = rules.map(r => '<div class="rule"><span class="dot"></span><span>' + r + '</span></div>').join("");
+  let rulesHtml = rules.map(r => '<div class="rule"><span class="dot"></span><span>' + r + '</span></div>').join("");
+  if (id === "schulte"){
+    rulesHtml += '<div class="rule" style="display:block"><div style="margin-bottom:9px">想换玩法？点一下直接换：</div>' +
+      '<div class="variant-row">' + VARIANTS.map(v =>
+        '<button type="button" class="vchip" data-bv="' + v.id + '" aria-pressed="' + (S.variant === v.id) + '" title="' + v.label + '">' + v.short + '</button>'
+      ).join("") + '</div></div>';
+  }
+  $("#briefRules").innerHTML = rulesHtml;
+
+  $$("#briefRules .vchip[data-bv]").forEach(c => {
+    c.addEventListener("click", () => {
+      S.variant = c.dataset.bv;
+      store.variant = S.variant;
+      saveStore();
+      renderModes();
+      clearInterval(S.briefTimer);
+      beginRound();          // 变体换了就重走一遍说明
+    });
+  });
 
   showScreen("brief");
   let cd = 3;
@@ -1738,13 +1775,19 @@ function showResult(){
   });
   if (P().history.length > 300) P().history = P().history.slice(-300);
 
-  // 解锁
+  // 解锁：只有「当前播放的档位 == 已解锁的最高档」时才推进下一档（防跳级）
   let unlocked = 0;
+  const prevUnlock = store.unlock;
   if (total >= UNLOCK_THRESHOLD && S.level < 5 && store.unlock === S.level){
     store.unlock = S.level + 1;
     unlocked = store.unlock;
   }
   saveStore();
+  // ★ 关键：解锁后必须立刻重建难度卡，否则回首页看到的还是旧锁状态（v4 之前的 bug）
+  if (store.unlock !== prevUnlock){
+    renderLevels();
+    $$(".level").forEach(x => x.setAttribute("aria-pressed", String(Number(x.dataset.level) === S.level)));
+  }
 
   $("#resKicker").textContent = isFull ? "整场训练完成 · LV." + S.level : "单项练习完成 · LV." + S.level;
 
@@ -2305,12 +2348,12 @@ $("#growthPlay").addEventListener("click", () => startSession("full"));
 $("#growthProf").addEventListener("click", openProfiles);
 
 $("#againBtn").addEventListener("click", () => startSession(S.mode));
-$("#homeBtn").addEventListener("click", () => { cancelAnimationFrame(S.raf); S.round = null; showScreen("intro"); renderBest(); });
+$("#homeBtn").addEventListener("click", () => { cancelAnimationFrame(S.raf); S.round = null; showScreen("intro"); refreshAll(); });
 $("#quitBtn").addEventListener("click", () => {
   const r = S.round;
   if (r && r.running && !window.confirm("这一局还没算分，确定退出吗？")) return;
   cancelAnimationFrame(S.raf); clearInterval(S.briefTimer);
-  S.round = null; showScreen("intro");
+  S.round = null; showScreen("intro"); refreshAll();
 });
 
 document.addEventListener("keydown", e => {
