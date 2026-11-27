@@ -327,8 +327,10 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
 .chart-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12px;color:var(--dim)}
 .chart-head b{color:#EAF0FF;font-size:13px}
 .chart-head span{color:var(--dimmer);font-size:11px}
-.chart{margin-top:10px;height:92px;width:100%}
+.chart{margin-top:10px;height:110px;width:100%}
 .chart svg{width:100%;height:100%;display:block;overflow:visible}
+.chart-foot{display:flex;justify-content:space-between;gap:10px;margin-top:8px;
+  font-size:10.5px;color:var(--dimmer);font-variant-numeric:tabular-nums}
 .chart-empty{font-size:11.5px;color:var(--dimmer);padding:26px 0;text-align:center}
 
 /* 弱项建议 */
@@ -451,6 +453,21 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
 .danger{color:#FFA3B4}
 .danger:hover{border-color:rgba(255,94,122,.5)}
+
+/* 档案列表 */
+.prof-list{display:grid;gap:8px;margin-top:6px}
+.prof-item{display:grid;grid-template-columns:1fr auto 26px;gap:10px;align-items:center;
+  padding:12px 14px;border-radius:12px;background:rgba(16,23,44,.7);border:1px solid var(--line);
+  cursor:pointer;transition:border-color .18s,background .18s}
+.prof-item:hover{border-color:var(--line-strong)}
+.prof-item.on{border-color:rgba(110,231,255,.5);background:linear-gradient(120deg,rgba(110,231,255,.1),rgba(16,23,44,.75))}
+.prof-item .pn{font-size:14px;font-weight:800;color:#EAF0FF}
+.prof-item .pm{font-size:11px;color:var(--dimmer);margin-top:3px}
+.prof-item .cur{font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(110,231,255,.15);
+  color:var(--cyan);border:1px solid rgba(110,231,255,.3);white-space:nowrap}
+.prof-del{width:26px;height:26px;border-radius:8px;border:1px solid var(--line);background:transparent;
+  color:#7C89AC;cursor:pointer;font-size:12px;padding:0;line-height:1}
+.prof-del:hover{border-color:rgba(255,94,122,.5);color:#FFA3B4}
 
 /* toast */
 .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:90;
@@ -665,6 +682,7 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
 
       <div class="board-actions">
         <button class="btn-solid" id="growthPlay">练一局</button>
+        <button class="btn-ghost" id="growthProf">切换档案</button>
         <button class="btn-ghost" id="growthHome">回到首页</button>
         <button class="btn-ghost" id="exportBtn">导出备份</button>
         <button class="btn-ghost" id="importBackupBtn">导入备份</button>
@@ -686,7 +704,7 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
     <p class="sub">数据都存在这台电脑上，不上传任何服务器。</p>
 
     <div class="field">
-      <label for="nameInput">玩家昵称</label>
+      <label for="nameInput">当前档案名</label>
       <input id="nameInput" maxlength="12" placeholder="给它起个名字" autocomplete="off">
     </div>
 
@@ -723,6 +741,25 @@ h1 .l2{display:block;font-family:"Songti SC","STSong","SimSun",Georgia,serif;fon
       <button class="btn-solid" id="saveSet">保存</button>
     </div>
     <input type="file" id="backupFile" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<!-- ============ 档案切换 ============ -->
+<div class="modal" id="profModal" role="dialog" aria-modal="true" aria-labelledby="profTitle">
+  <div class="modal-card">
+    <h3 id="profTitle">切换档案</h3>
+    <p class="sub">每个人一个档案：成绩、历史、徽章各自独立，互不影响。</p>
+    <div class="prof-list" id="profList"></div>
+    <div class="field" style="margin-top:16px;margin-bottom:0">
+      <label for="newProfInput">新建档案</label>
+      <div style="display:flex;gap:8px">
+        <input id="newProfInput" maxlength="12" placeholder="输入名字" autocomplete="off">
+        <button class="btn-sm" id="newProfBtn">新建</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="closeProf">关闭</button>
+    </div>
   </div>
 </div>
 
@@ -874,16 +911,35 @@ const SFX = {
    ================================================================== */
 
 const DEFAULTS = () => ({
-  v: 3,
-  player: "训练者",
+  v: 4,
+  player: "训练者",        // 当前档案名
   sound: true,
   colorAid: false,
   unlock: 1,
   variant: "asc",
-  best: {},       // {"1": 92, ...} 每档最高分
-  history: [],    // [{ts, level, total, scores:{}, items}]
-  milestones: {}  // { badgeId: ts }
+  profiles: {}             // { "昵称": { best, history, milestones } }
 });
+
+function blankProfile(){ return { best:{}, history:[], milestones:{} }; }
+
+function normHistory(list){
+  return (Array.isArray(list) ? list : [])
+    .filter(h => h && typeof h.total === "number" && h.ts)
+    .map(h => ({
+      ts: h.ts, level: h.level || 1, total: h.total,
+      scores: h.scores || {}, items: h.items || 0, mode: h.mode || "full"
+    }))
+    .slice(-300);
+}
+
+function normProfile(p){
+  p = p || {};
+  return {
+    best: (p.best && typeof p.best === "object") ? p.best : {},
+    history: normHistory(p.history),
+    milestones: (p.milestones && typeof p.milestones === "object") ? p.milestones : {}
+  };
+}
 
 function loadStore(){
   try{
@@ -892,37 +948,32 @@ function loadStore(){
     const o = JSON.parse(raw) || {};
     const d = DEFAULTS();
     const out = {
-      v: 3,
+      v: 4,
       player: typeof o.player === "string" && o.player ? o.player : d.player,
       sound: o.sound !== false,
       colorAid: o.colorAid === true,
       unlock: clamp(Number(o.unlock) || 1, 1, 5),
       variant: VARIANTS.some(v => v.id === o.variant) ? o.variant : "asc",
-      best: {},
-      history: [],
-      milestones: (o.milestones && typeof o.milestones === "object") ? o.milestones : {}
+      profiles: {}
     };
 
-    if (o.players && typeof o.players === "object"){
-      // v2 → v3：多玩家结构里取出当前玩家的数据
-      const p = o.players[out.player] || o.players[Object.keys(o.players)[0]];
-      if (p){
-        out.best = (p.best && typeof p.best === "object") ? p.best : {};
-        out.history = Array.isArray(p.history) ? p.history : [];
-      }
+    if (o.profiles && typeof o.profiles === "object"){
+      // v4：多档案
+      Object.keys(o.profiles).forEach(k => { out.profiles[k] = normProfile(o.profiles[k]); });
+    } else if (o.players && typeof o.players === "object"){
+      // v2 多玩家 → 每人一个档案
+      Object.keys(o.players).forEach(k => {
+        const p = o.players[k] || {};
+        out.profiles[k] = normProfile({ best:p.best, history:p.history, milestones:{} });
+      });
     } else {
-      // v1/v3：单玩家结构
-      out.best = (o.best && typeof o.best === "object") ? o.best : {};
-      out.history = Array.isArray(o.history) ? o.history : [];
+      // v1 / v3 单档案
+      out.profiles[out.player] = normProfile({ best:o.best, history:o.history, milestones:o.milestones });
     }
 
-    out.history = out.history
-      .filter(h => h && typeof h.total === "number" && h.ts)
-      .map(h => ({
-        ts: h.ts, level: h.level || 1, total: h.total,
-        scores: h.scores || {}, items: h.items || 0, mode: h.mode || "full"
-      }))
-      .slice(-300);
+    const keys = Object.keys(out.profiles);
+    if (!out.profiles[out.player]) out.player = keys.length ? keys[0] : out.player;
+    if (!out.profiles[out.player]) out.profiles[out.player] = blankProfile();
 
     return out;
   } catch(e){ return DEFAULTS(); }
@@ -931,6 +982,12 @@ function saveStore(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)
 
 let store = loadStore();
 SFX.on = store.sound;
+
+// 当前档案（每个档案一套独立的成绩 / 历史 / 徽章）
+function P(){
+  if (!store.profiles[store.player]) store.profiles[store.player] = blankProfile();
+  return store.profiles[store.player];
+}
 
 /* ==================================================================
    五、状态
@@ -1053,7 +1110,7 @@ function renderModes(){
 }
 
 function renderBest(){
-  const b = store.best[S.level];
+  const b = P().best[S.level];
   const name = store.player;
   $("#whoName").textContent = name;
   $("#bestInfo").innerHTML = b
@@ -1668,15 +1725,15 @@ function showResult(){
   const lvKey = String(S.level);
   const scores = {};
   S.results.forEach(x => { scores[x.id] = x.score; });
-  const prevBest = store.best[lvKey] || 0;
+  const prevBest = P().best[lvKey] || 0;
   const isNewBest = total > prevBest;
-  if (isNewBest) store.best[lvKey] = total;
+  if (isNewBest) P().best[lvKey] = total;
   const items = S.results.reduce((a, b) => a + (b.count || 0), 0);
-  store.history.push({
+  P().history.push({
     ts: Date.now(), level: S.level, total: total, scores: scores,
     items: items, mode: S.mode
   });
-  if (store.history.length > 300) store.history = store.history.slice(-300);
+  if (P().history.length > 300) P().history = P().history.slice(-300);
 
   // 解锁
   let unlocked = 0;
@@ -1746,7 +1803,7 @@ function showResult(){
 }
 
 function renderChart(){
-  const list = store.history.filter(h => h.level === S.level).slice(-10);
+  const list = P().history.filter(h => h.level === S.level).slice(-10);
   $("#chartLv").textContent = S.level;
   const box = $("#chart");
   if (list.length < 2){
@@ -1822,7 +1879,7 @@ function calcStreak(history){
 }
 
 function stats(){
-  const h = store.history;
+  const h = P().history;
   const maxTotal = h.length ? Math.max.apply(null, h.map(x => x.total)) : 0;
   let maxSubject = 0;
   h.forEach(x => { const sc = x.scores || {}; Object.keys(sc).forEach(k => { if (sc[k] > maxSubject) maxSubject = sc[k]; }); });
@@ -1841,8 +1898,8 @@ function checkMilestones(){
   const s = stats();
   const fresh = [];
   MILESTONES.forEach(m => {
-    if (!store.milestones[m.id] && m.test(s)){
-      store.milestones[m.id] = Date.now();
+    if (!P().milestones[m.id] && m.test(s)){
+      P().milestones[m.id] = Date.now();
       fresh.push(m);
     }
   });
@@ -1885,7 +1942,7 @@ function renderTrend(){
   }));
 
   const box = $("#trendChart");
-  const list = store.history.slice(-20);
+  const list = P().history.slice(-20);
   if (list.length < 2){
     box.innerHTML = '<div class="chart-empty">至少练 2 局，这里会出现你的成长曲线</div>';
     return;
@@ -1926,7 +1983,7 @@ function renderTrend(){
 function renderLevelProgress(){
   const box = $("#levelProgress");
   box.innerHTML = LEVELS.map(lv => {
-    const sc = store.best[String(lv.id)] || 0;
+    const sc = P().best[String(lv.id)] || 0;
     const locked = !isUnlocked(lv.id);
     return '<div class="lp-row' + (locked ? " locked" : "") + '">' +
         '<span class="n">LV.' + lv.id + ' ' + lv.name + '</span>' +
@@ -1937,7 +1994,7 @@ function renderLevelProgress(){
   }).join("");
   requestAnimationFrame(() => { $$("#levelProgress .bar i").forEach(e => { e.style.width = e.dataset.w + "%"; }); });
 
-  const best = LEVELS.reduce((a, lv) => Math.max(a, store.best[String(lv.id)] || 0), 0);
+  const best = LEVELS.reduce((a, lv) => Math.max(a, P().best[String(lv.id)] || 0), 0);
   $("#progressHint").textContent = best ? "历史最高 " + best + " 分" : "还没有成绩";
 }
 
@@ -1945,7 +2002,7 @@ function renderBadges(){
   const s = stats();
   let got = 0;
   $("#badges").innerHTML = MILESTONES.map(m => {
-    const on = !!store.milestones[m.id] || m.test(s);
+    const on = !!P().milestones[m.id] || m.test(s);
     if (on) got++;
     return '<div class="badge ' + (on ? "on" : "off") + '" title="' + m.ds + '">' +
         '<span class="ic">' + m.ic + '</span>' +
@@ -1958,7 +2015,7 @@ function renderBadges(){
 
 function renderRecent(){
   const host = $("#recentList");
-  const list = store.history.slice(-10).reverse();
+  const list = P().history.slice(-10).reverse();
   if (!list.length){ host.innerHTML = '<div class="recent-empty">还没有记录</div>'; return; }
   host.innerHTML = list.map(h => {
     const d = new Date(h.ts);
@@ -1979,9 +2036,9 @@ function renderRecent(){
 
 function exportBackup(){
   const data = {
-    app: "focus-train-lab", v: 3, exportedAt: Date.now(),
+    app: "focus-train-lab", v: 4, exportedAt: Date.now(),
     player: store.player, unlock: store.unlock,
-    best: store.best, history: store.history, milestones: store.milestones
+    profiles: store.profiles        // 导出全部档案，换设备一次带走所有
   };
   try{
     const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
@@ -1994,10 +2051,24 @@ function exportBackup(){
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1500);
-    toast("备份已下载，换设备导入它就恢复");
+    toast("备份已下载（含全部 " + Object.keys(store.profiles).length + " 个档案）");
   } catch(e){
     toast("导出失败，换个浏览器试试");
   }
+}
+
+function mergeInto(dst, src){
+  src = normProfile(src);
+  Object.keys(src.best).forEach(k => {
+    const v = Number(src.best[k]);
+    if (!isNaN(v) && v > (dst.best[k] || 0)) dst.best[k] = v;
+  });
+  const seen = {};
+  dst.history.forEach(h => { seen[h.ts] = 1; });
+  src.history.forEach(h => { if (!seen[h.ts]) { dst.history.push(h); seen[h.ts] = 1; } });
+  dst.history.sort((a, b) => a.ts - b.ts);
+  if (dst.history.length > 300) dst.history = dst.history.slice(-300);
+  Object.keys(src.milestones).forEach(k => { if (!dst.milestones[k]) dst.milestones[k] = src.milestones[k]; });
 }
 
 function importBackup(text){
@@ -2005,34 +2076,117 @@ function importBackup(text){
   try{ d = JSON.parse(text); } catch(e){ return { ok:false, msg:"这不是有效的备份文件" }; }
   if (!d || d.app !== "focus-train-lab") return { ok:false, msg:"这不是专注力训练场的备份" };
 
-  // best 取每档最高
-  const best = d.best || {};
-  Object.keys(best).forEach(k => {
-    const v = Number(best[k]);
-    if (!isNaN(v) && v > (store.best[k] || 0)) store.best[k] = v;
-  });
+  let n = 0;
+  if (d.profiles && typeof d.profiles === "object"){
+    // v4：多档案
+    Object.keys(d.profiles).forEach(k => {
+      if (!store.profiles[k]) store.profiles[k] = normProfile(d.profiles[k]);
+      else mergeInto(store.profiles[k], d.profiles[k]);
+      n++;
+    });
+  } else {
+    // 兼容 v3 单档案备份：并进当前档案
+    mergeInto(P(), { best: d.best, history: d.history, milestones: d.milestones });
+    n = 1;
+  }
 
-  // history 按时间合并去重
-  const seen = {};
-  store.history.forEach(h => { seen[h.ts] = 1; });
-  (Array.isArray(d.history) ? d.history : []).forEach(h => {
-    if (!h || typeof h.total !== "number" || !h.ts || seen[h.ts]) return;
-    store.history.push({ ts:h.ts, level:h.level || 1, total:h.total, scores:h.scores || {}, items:h.items || 0, mode:h.mode || "full" });
-    seen[h.ts] = 1;
-  });
-  store.history.sort((a, b) => a.ts - b.ts);
-  if (store.history.length > 300) store.history = store.history.slice(-300);
-
-  // 徽章合并
-  const ms = d.milestones || {};
-  Object.keys(ms).forEach(k => { if (!store.milestones[k]) store.milestones[k] = ms[k]; });
-
-  // 解锁进度取更高
   if (Number(d.unlock) > store.unlock) store.unlock = clamp(Number(d.unlock), 1, 5);
 
+  if (!store.profiles[store.player]) store.player = Object.keys(store.profiles)[0] || "训练者";
   saveStore();
-  return { ok:true, msg:"导入成功：合并了 " + (Array.isArray(d.history) ? d.history.length : 0) + " 条记录" };
+  return { ok:true, msg:"导入成功：合并了 " + n + " 个档案" };
 }
+
+/* ==================================================================
+   十二点五、档案（每个人一个记录）
+   ================================================================== */
+
+function refreshAll(){
+  S.level = clamp(S.level, 1, store.unlock);
+  renderLevels();
+  renderModes();
+  renderBest();
+  renderGrowth();
+}
+
+function renderProfiles(){
+  const host = $("#profList");
+  if (!host) return;
+  const keys = Object.keys(store.profiles);
+  host.innerHTML = keys.map(k => {
+    const p = store.profiles[k] || blankProfile();
+    const runs = p.history.length;
+    const best = runs ? Math.max.apply(null, p.history.map(h => h.total)) : 0;
+    const me = k === store.player;
+    return '<div class="prof-item' + (me ? " on" : "") + '" data-p="' + k + '">' +
+        '<div><div class="pn">' + k + '</div>' +
+        '<div class="pm">' + (runs ? runs + " 局 · 最高 " + best + " 分" : "还没有记录") + '</div></div>' +
+        (me ? '<span class="cur">当前</span>' : '<span></span>') +
+        (keys.length > 1 ? '<button class="prof-del" data-del="' + k + '" title="删除这个档案">✕</button>' : '<span></span>') +
+      '</div>';
+  }).join("");
+
+  $$("#profList .prof-item").forEach(el => {
+    el.addEventListener("click", e => {
+      if (e.target && e.target.dataset && e.target.dataset.del) return;
+      if (el.dataset.p === store.player){ closeProfiles(); return; }
+      switchProfile(el.dataset.p);
+    });
+  });
+  $$("#profList .prof-del").forEach(b => {
+    b.addEventListener("click", e => {
+      e.stopPropagation();
+      const name = b.dataset.del;
+      if (!window.confirm("删除档案「" + name + "」？它的成绩、历史和徽章会一起删掉。")) return;
+      delete store.profiles[name];
+      if (store.player === name) store.player = Object.keys(store.profiles)[0] || "";
+      if (!store.player){ store.player = "训练者"; store.profiles["训练者"] = blankProfile(); }
+      saveStore();
+      refreshAll();
+      renderProfiles();
+      toast("档案已删除");
+    });
+  });
+}
+
+function openProfiles(){
+  renderProfiles();
+  $("#newProfInput").value = "";
+  $("#profModal").classList.add("open");
+  SFX.tick();
+}
+function closeProfiles(){ $("#profModal").classList.remove("open"); }
+
+function switchProfile(name){
+  if (!store.profiles[name]) return;
+  store.player = name;
+  saveStore();
+  refreshAll();
+  closeProfiles();
+  SFX.tick();
+  toast("已切到「" + name + "」");
+}
+
+function createProfile(name){
+  name = String(name || "").trim().slice(0, 12);
+  if (!name){ toast("先起个名字"); return; }
+  if (store.profiles[name]){ toast("这个档案已经存在"); switchProfile(name); return; }
+  store.profiles[name] = blankProfile();
+  store.player = name;
+  saveStore();
+  refreshAll();
+  renderProfiles();
+  $("#newProfInput").value = "";
+  toast("已创建「" + name + "」");
+}
+
+$("#whoTag").addEventListener("click", openProfiles);
+$("#closeProf").addEventListener("click", closeProfiles);
+$("#profModal").addEventListener("click", e => { if (e.target === $("#profModal")) closeProfiles(); });
+$("#newProfBtn").addEventListener("click", () => createProfile($("#newProfInput").value));
+$("#newProfInput").addEventListener("keydown", e => {
+  if (e.key === "Enter"){ e.preventDefault(); createProfile($("#newProfInput").value); }
+});
 
 /* ==================================================================
    十三、设置
@@ -2053,13 +2207,20 @@ $("#setModal").addEventListener("click", e => { if (e.target === $("#setModal"))
 
 $("#saveSet").addEventListener("click", () => {
   const name = ($("#nameInput").value || "").trim().slice(0, 12);
-  if (name) store.player = name;
+  if (name && name !== store.player){
+    if (store.profiles[name]){
+      store.player = name;                       // 已存在 → 直接切过去
+    } else {
+      store.profiles[name] = store.profiles[store.player] || blankProfile();
+      delete store.profiles[store.player];       // 改名：数据跟着走
+      store.player = name;
+    }
+  }
   store.sound = $("#sfxSwitch").getAttribute("aria-checked") === "true";
   store.colorAid = $("#aidSwitch").getAttribute("aria-checked") === "true";
   SFX.on = store.sound;
   saveStore();
-  renderBest();
-  renderGrowth();
+  refreshAll();
   closeSettings();
   toast("设置已保存");
 });
@@ -2127,7 +2288,7 @@ $("#soundBtn").addEventListener("click", () => {
   toast(store.sound ? "音效已打开" : "音效已关闭");
 });
 
-$("#whoTag").addEventListener("click", openSettings);
+$("#whoTag").addEventListener("click", openProfiles);
 
 /* ==================================================================
    十四、按钮与键盘
@@ -2138,6 +2299,7 @@ $("#boardBtn").addEventListener("click", () => { renderGrowth(); showScreen("gro
 $("#boardFromResult").addEventListener("click", () => { renderGrowth(); showScreen("growth"); });
 $("#growthHome").addEventListener("click", () => { showScreen("intro"); renderBest(); });
 $("#growthPlay").addEventListener("click", () => startSession("full"));
+$("#growthProf").addEventListener("click", openProfiles);
 
 $("#againBtn").addEventListener("click", () => startSession(S.mode));
 $("#homeBtn").addEventListener("click", () => { cancelAnimationFrame(S.raf); S.round = null; showScreen("intro"); renderBest(); });
@@ -2150,6 +2312,7 @@ $("#quitBtn").addEventListener("click", () => {
 
 document.addEventListener("keydown", e => {
   if (e.key === "Escape"){
+    if ($("#profModal").classList.contains("open")){ closeProfiles(); return; }
     if ($("#setModal").classList.contains("open")){ closeSettings(); return; }
     if ($("#screen-play").classList.contains("is-active")){ $("#quitBtn").click(); return; }
   }
